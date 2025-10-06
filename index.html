@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>For Nawaa — From Phukao</title>
+<meta name="theme-color" content="#0a0d12">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#0c1119; --text:#e7ebf4; --muted:#a0a8b7;
+    --ring: rgba(255,255,255,.12);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent}
+  html,body{height:100%}
+  body{
+    margin:0; font-family: ui-sans-serif,-apple-system,Segoe UI,Roboto,system-ui;
+    color:var(--text); background:var(--bg); overflow:hidden; /* no scroll */
+  }
+  /* starfield */
+  #stars{position:fixed; inset:0; z-index:-2}
+  .space-grad{position:fixed; inset:0; z-index:-1;
+    background: radial-gradient(1000px 700px at 70% -10%, #182035 0%, transparent 55%);
+    pointer-events:none;
+  }
+  .app{height:100%; display:grid; grid-template-rows: 1fr auto}
+  .screen{height:100%; width:100%; position:relative}
+  .pager{height:100%; width:200%; display:flex; transition: transform .6s cubic-bezier(.2,.8,.2,1)}
+  .page{width:100%; height:100%; padding:24px 18px 18px; display:flex; align-items:center; justify-content:center}
+  .safe{height:100%; width:100%; display:flex; align-items:center; justify-content:center}
+  .frame{
+    width:min(88vw, 420px); aspect-ratio: 9/16; background:var(--panel);
+    border:1px solid var(--ring); border-radius:22px; box-shadow: 0 10px 50px rgba(0,0,0,.55);
+    display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
+    padding:18px;
+  }
+  .center{width:100%; height:100%; display:flex; align-items:center; justify-content:center; text-align:center}
+  .type{font-weight:800; letter-spacing:.5px; line-height:1.2; font-size: clamp(24px, 7vw, 40px); white-space:pre-line}
+  .cursor{display:inline-block; width:1ch; animation: blink 1s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+  .moon{position:absolute; top:10px; right:10px; width:88px; opacity:.95; filter: drop-shadow(0 0 18px rgba(255,255,210,.35));}
+  .cat{position:absolute; bottom:8px; left:50%; transform:translateX(-50%); width:120px; opacity:.95}
+  .hint{position:absolute; bottom:10px; width:100%; text-align:center; color:var(--muted); font-size:12px}
+  /* gallery */
+  .galleryWrap{width:100%; height:100%; display:grid; grid-template-rows: 1fr auto; gap:12px}
+  .slideArea{position:relative; overflow:hidden; border-radius:16px; border:1px solid var(--ring); background:#0a0f18}
+  .slides{height:100%; width:100%; position:relative}
+  .slide{position:absolute; inset:0; display:grid; place-items:center; opacity:0; transform: translateX(20px) scale(.98)}
+  .slide.active{opacity:1; transform:none}
+  .slide img{max-width:100%; max-height:100%; object-fit:contain; display:block}
+  .caption{font-size:clamp(14px, 4.2vw, 16px); color:var(--muted); text-align:center; min-height:2.2em}
+  .nav{height:58px; display:flex; align-items:center; justify-content:center; gap:14px; border-top:1px solid var(--ring); background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)); padding: 8px env(safe-area-inset-right) 12px env(safe-area-inset-left)}
+  .dot{width:8px; height:8px; border-radius:999px; background:#2b2f37; border:1px solid var(--ring)}
+  .dot.active{background:#cbd5e1}
+  .btn{appearance:none; border:1px solid var(--ring); background:transparent; color:var(--text); border-radius:12px; padding:10px 14px; font-weight:700; letter-spacing:.2px}
+  .btn:active{transform: scale(.98)}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="space-grad"></div>
+
+<div class="app">
+  <div class="screen">
+    <div id="pager" class="pager">
+      <!-- PAGE 1 -->
+      <section class="page" aria-label="intro">
+        <div class="safe">
+          <div class="frame">
+            <svg class="moon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="g" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="#fff9c4"/>
+                  <stop offset="70%" stop-color="#fde68a"/>
+                  <stop offset="100%" stop-color="#facc15"/>
+                </radialGradient>
+              </defs>
+              <circle cx="60" cy="60" r="46" fill="url(#g)"/>
+              <circle cx="72" cy="52" r="40" fill="#0c1119"/>
+            </svg>
+            <div class="center">
+              <div class="type" id="typeTarget"></div>
+            </div>
+            <div class="hint">ปัดไปทางซ้าย → เพื่อดูแกลเลอรี่</div>
+            <svg class="cat" viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="90" cy="86" rx="60" ry="28" fill="#0b0b0f"/>
+              <circle cx="150" cy="70" r="22" fill="#0b0b0f"/>
+              <path d="M138,60 l-10,-18 l16,6 z" fill="#0b0b0f"/>
+              <path d="M162,60 l10,-18 l-16,6 z" fill="#0b0b0f"/>
+              <g id="tail" transform-origin="40 80">
+                <path d="M40,80 q-10,-20 10,-30 q28,-12 44,12" fill="none" stroke="#0b0b0f" stroke-width="14" stroke-linecap="round"/>
+              </g>
+              <circle cx="143" cy="70" r="3" fill="#dbeafe"/>
+              <circle cx="157" cy="70" r="3" fill="#dbeafe"/>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 2 -->
+      <section class="page" aria-label="gallery">
+        <div class="safe">
+          <div class="frame">
+            <svg class="moon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="g2" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="#fff9c4"/>
+                  <stop offset="70%" stop-color="#fde68a"/>
+                  <stop offset="100%" stop-color="#facc15"/>
+                </radialGradient>
+              </defs>
+              <circle cx="60" cy="60" r="46" fill="url(#g2)"/>
+              <circle cx="72" cy="52" r="40" fill="#0c1119"/>
+            </svg>
+            <div class="galleryWrap">
+              <div class="slideArea" id="slideArea">
+                <div class="slides" id="slides"></div>
+              </div>
+              <div class="caption" id="caption">—</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="btn" id="prevPage">←</button>
+    <div style="display:flex; gap:8px">
+      <div class="dot" id="dot0"></div>
+      <div class="dot" id="dot1"></div>
+    </div>
+    <button class="btn" id="nextPage">→</button>
+  </nav>
+</div>
+
+<script>
+/* ----------------- CONFIG + SYNC ------------------ */
+const KEY = "hb_config";
+const DEFAULTS = {
+  heroLines: ["From Phukao","To Nawaa"],
+  gallery: [{src:null, caption:"เพิ่มรูปภาพได้ที่หน้า Admin"}],
+};
+let CFG = null;
+try{ CFG = JSON.parse(localStorage.getItem(KEY)) || DEFAULTS; }catch(e){ CFG = DEFAULTS; }
+
+const channel = new BroadcastChannel('hb_sync');
+channel.onmessage = (e)=>{
+  if(e.data && e.data.type === 'cfg:update'){
+    CFG = e.data.payload || DEFAULTS;
+    localStorage.setItem(KEY, JSON.stringify(CFG));
+    applyConfig(true);
+  }
+};
+window.addEventListener('storage', (e)=>{
+  if(e.key === KEY){
+    try{ CFG = JSON.parse(e.newValue) || DEFAULTS; }catch(_){ CFG = DEFAULTS; }
+    applyConfig(true);
+  }
+});
+
+/* ----------------- PAGE ROUTER ------------------ */
+let pageIndex = 0;
+const pager = document.getElementById("pager");
+const dots = [document.getElementById("dot0"), document.getElementById("dot1")];
+function setPage(i){
+  pageIndex = Math.max(0, Math.min(1,i));
+  pager.style.transform = `translateX(${pageIndex*-50}%)`;
+  dots.forEach((d,idx)=>d.classList.toggle("active", idx===pageIndex));
+  gsap.fromTo(".frame",{y:8, opacity:0},{y:0, opacity:1, duration:.5, ease:"power2.out"});
+}
+document.getElementById("prevPage").onclick=()=>setPage(pageIndex-1);
+document.getElementById("nextPage").onclick=()=>setPage(pageIndex+1);
+setPage(0);
+
+// swipe between pages
+let startX=0, dragging=false;
+function onTouchStart(e){ dragging=true; startX= e.touches? e.touches[0].clientX : e.clientX; }
+function onTouchEnd(e){
+  if(!dragging) return; dragging=false;
+  const endX = e.changedTouches? e.changedTouches[0].clientX : e.clientX;
+  const dx = endX - startX;
+  if(Math.abs(dx) > 50){ if(dx<0) setPage(pageIndex+1); else setPage(pageIndex-1); }
+}
+document.querySelectorAll(".page").forEach(el=>{
+  el.addEventListener("touchstart", onTouchStart, {passive:true});
+  el.addEventListener("touchend", onTouchEnd, {passive:true});
+});
+
+/* ----------------- TYPEWRITER ------------------ */
+const typeTarget = document.getElementById("typeTarget");
+let typeTimer = null;
+function startTypewriter(lines){
+  const full = (lines && lines.length ? lines : DEFAULTS.heroLines).join("\n");
+  let i=0;
+  if(typeTimer) { clearTimeout(typeTimer); typeTimer=null; }
+  function typeLoop(){
+    typeTarget.innerHTML = full.slice(0,i).replace(/\n/g,"<br>") + '<span class="cursor">|</span>';
+    i++;
+    if(i<=full.length){ typeTimer = setTimeout(typeLoop, 85); }
+  }
+  gsap.delayedCall(.2, typeLoop);
+}
+
+/* ----------------- GALLERY ------------------ */
+const slidesEl = document.getElementById("slides");
+const captionEl = document.getElementById("caption");
+let current = 0;
+
+function buildSlides(items){
+  slidesEl.innerHTML = "";
+  const slides = (items && items.length) ? items : DEFAULTS.gallery;
+  slides.forEach((item, idx)=>{
+    const s = document.createElement("div");
+    s.className = "slide" + (idx===0 ? " active" : "");
+    const img = document.createElement("img");
+    if(item.src){ img.src = item.src; } else {
+      img.src = "data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 1600'><rect fill='#0a0f18' width='900' height='1600'/><rect x='80' y='120' width='740' height='1360' rx='28' ry='28' fill='#0c1119' stroke='#243041'/><text x='50%' y='50%' fill='#9aa3af' font-family='system-ui' font-size='40' text-anchor='middle'>เพิ่มรูปภาพใน Admin</text></svg>`);
+    }
+    s.appendChild(img);
+    slidesEl.appendChild(s);
+  });
+  current = 0;
+  captionEl.textContent = slides[0]?.caption || "—";
+}
+
+function showSlide(next){
+  const els = [...document.querySelectorAll(".slide")];
+  const prev = current;
+  current = (next+els.length) % els.length;
+  const a = els[prev], b = els[current];
+  if(!a || !b || a===b) return;
+  gsap.killTweensOf([a,b]);
+  gsap.to(a, {opacity:0, x: -42*(next>prev?1:-1), scale:.985, duration:.35, ease:"power2.in"});
+  b.style.opacity=0; b.style.transform="translateX(42px) scale(.985)";
+  b.classList.add("active"); a.classList.remove("active");
+  gsap.to(b, {opacity:1, x:0, scale:1, duration:.45, ease:"power2.out"});
+  const data = (CFG.gallery && CFG.gallery.length) ? CFG.gallery : DEFAULTS.gallery;
+  captionEl.textContent = data[current]?.caption || "—";
+}
+
+// swipe inside gallery
+const slideArea = document.getElementById("slideArea");
+let gx=0, gStart=0, gDrag=false;
+slideArea.addEventListener("touchstart",(e)=>{ gDrag=true; gStart=e.touches[0].clientX; gx=gStart; }, {passive:true});
+slideArea.addEventListener("touchmove",(e)=>{ if(!gDrag) return; gx=e.touches[0].clientX; }, {passive:true});
+slideArea.addEventListener("touchend",()=>{ if(!gDrag) return; gDrag=false; const dx = gx - gStart; if(Math.abs(dx)>40){ if(dx<0) showSlide(current+1); else showSlide(current-1); }}, {passive:true});
+addEventListener("keydown",(e)=>{ if(e.key==="ArrowLeft") showSlide(current-1); if(e.key==="ArrowRight") showSlide(current+1); });
+
+/* ----------------- STARFIELD + MOTION ------------------ */
+const cvs = document.getElementById("stars"), ctx = cvs.getContext("2d");
+let W=innerWidth, H=innerHeight; function resize(){ W=innerWidth; H=innerHeight; cvs.width=W; cvs.height=H; } resize();
+addEventListener("resize", resize);
+const stars = Array.from({length: 160}, ()=>({ x: Math.random()*W, y: Math.random()*H, r: Math.random()*1.8+0.3, s: Math.random()*0.6+0.2 }));
+(function loop(){
+  ctx.clearRect(0,0,W,H);
+  for(const p of stars){
+    ctx.globalAlpha = 0.6 + Math.sin((Date.now()/1000)*p.s + p.x)*0.4;
+    ctx.fillStyle = "#c7d2fe";
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    p.x += (p.s-0.3)*0.25; if(p.x< -5) p.x=W+5;
+  }
+  requestAnimationFrame(loop);
+})();
+gsap.to(".moon",{y:6, duration:2.4, repeat:-1, yoyo:true, ease:"sine.inOut"});
+gsap.to("#tail",{rotation:10, transformOrigin:"40px 80px", duration:1.2, repeat:-1, yoyo:true, ease:"sine.inOut"});
+
+/* ----------------- APPLY (initial & updates) ------------------ */
+function applyConfig(animated=false){
+  startTypewriter(CFG.heroLines);
+  buildSlides(CFG.gallery);
+  if(animated){
+    gsap.fromTo(".frame",{y:8, opacity:0},{y:0, opacity:1, duration:.5, ease:"power2.out"});
+  }
+}
+applyConfig();
+</script>
+</body>
+</html>

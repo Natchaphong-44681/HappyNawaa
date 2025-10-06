@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Admin — Birthday Config</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<style>
+  :root{
+    --bg:#0f1114; --panel:#12151c; --ring:rgba(255,255,255,.12);
+    --text:#e7eaf1; --muted:#9aa3af; --accent:#1f2937;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent}
+  body{margin:0; font-family: ui-sans-serif,-apple-system,Segoe UI,Roboto,system-ui; background:var(--bg); color:var(--text)}
+  .wrap{max-width:900px; margin:0 auto; padding:24px 16px 60px}
+  h1{margin:0 0 14px 0; font-size:clamp(22px,6vw,28px)}
+  .sub{color:var(--muted); margin-bottom:16px}
+  .card{background:var(--panel); border:1px solid var(--ring); border-radius:14px; padding:14px; margin:10px 0}
+  label{display:block; font-size:14px; color:#cbd5e1; margin:6px 0}
+  input[type="text"], textarea{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--ring);
+    background:#0f1319; color:var(--text); font:inherit;
+  }
+  .row{display:flex; gap:10px; flex-wrap:wrap}
+  .btn{
+    appearance:none; border:1px solid var(--ring); background:#0f1319; color:var(--text);
+    border-radius:10px; padding:10px 12px; font-weight:700; cursor:pointer;
+  }
+  .btn.primary{background:#1f2937}
+  .grid{display:grid; grid-template-columns: repeat(2,1fr); gap:10px}
+  @media (max-width:720px){ .grid{grid-template-columns:1fr} }
+  .item{background:#0f1319; border:1px dashed var(--ring); border-radius:12px; padding:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>หลังบ้าน — ตั้งค่าเว็บ</h1>
+  <div class="sub">แก้ข้อความหน้าแรก, เพิ่มรูป & คำบรรยายแกลเลอรี่ • ข้อมูลเก็บใน <code>localStorage</code> และซิงค์เรียลไทม์ผ่าน <code>BroadcastChannel</code></div>
+
+  <div class="card">
+    <h3>ข้อความหน้าแรก (Typewriter)</h3>
+    <label>บรรทัดที่ 1</label>
+    <input id="line1" type="text" placeholder="From Phukao">
+    <label>บรรทัดที่ 2</label>
+    <input id="line2" type="text" placeholder="To Nawaa">
+    <div style="margin-top:10px" class="row">
+      <button class="btn primary" id="saveHero">บันทึกข้อความ</button>
+      <button class="btn" id="previewHero">พรีวิวส่งไปหน้าเว็บทันที</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>แกลเลอรี่ (แนวตั้ง กึ่งกลาง กรอบมน)</h3>
+    <div class="sub">เพิ่มภาพจากเครื่อง • ใช้ภาพแนวตั้งจะพอดีกรอบ 9:16</div>
+    <input id="fileInput" type="file" accept="image/*" multiple class="btn">
+    <div style="margin-top:10px">
+      <button class="btn" id="addFiles">เพิ่มรูป</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="card">
+    <h3>นำเข้า/ส่งออก</h3>
+    <div class="row">
+      <button class="btn" id="exportBtn">Export JSON</button>
+      <label class="btn" for="importInput" style="cursor:pointer">Import JSON</label>
+      <input id="importInput" type="file" accept="application/json" style="display:none">
+      <button class="btn" id="resetBtn">Reset ค่าเริ่มต้น</button>
+    </div>
+  </div>
+
+  <p class="sub">เสร็จแล้วเปิด <strong>index.html</strong> (Live Server) ดูผลได้ทันที</p>
+</div>
+
+<script>
+/* ---------- State + Sync ---------- */
+const KEY = "hb_config";
+const DEFAULTS = {
+  heroLines: ["From Phukao","To Nawaa"],
+  gallery: [{src:null, caption:""}],
+};
+let CFG = null;
+try{
+  CFG = JSON.parse(localStorage.getItem(KEY)) || DEFAULTS;
+}catch(e){ CFG = DEFAULTS; }
+
+const channel = new BroadcastChannel('hb_sync');
+function persistAndBroadcast(){
+  localStorage.setItem(KEY, JSON.stringify(CFG));
+  channel.postMessage({type:'cfg:update', payload: CFG});
+}
+
+/* ---------- Hero form ---------- */
+const line1 = document.getElementById("line1");
+const line2 = document.getElementById("line2");
+const saveHero = document.getElementById("saveHero");
+const previewHero = document.getElementById("previewHero");
+
+line1.value = CFG.heroLines?.[0] ?? DEFAULTS.heroLines[0];
+line2.value = CFG.heroLines?.[1] ?? DEFAULTS.heroLines[1];
+
+saveHero.onclick = ()=>{
+  CFG.heroLines = [line1.value || "", line2.value || ""];
+  persistAndBroadcast();
+  alert("บันทึกข้อความแล้ว");
+};
+previewHero.onclick = ()=>{
+  CFG.heroLines = [line1.value || "", line2.value || ""];
+  persistAndBroadcast();
+};
+
+/* ---------- Gallery UI ---------- */
+const grid = document.getElementById("grid");
+function renderGrid(){
+  grid.innerHTML = "";
+  (CFG.gallery || []).forEach((item, idx)=>{
+    const el = document.createElement("div");
+    el.className = "item";
+    el.innerHTML = `
+      <div style="display:grid; grid-template-columns: 96px 1fr; gap:10px; align-items:center">
+        <div style="width:96px; aspect-ratio:9/16; overflow:hidden; border-radius:10px; border:1px solid rgba(255,255,255,.15)">
+          ${item.src ? `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover">` : `<div style="width:100%; height:100%; display:grid; place-items:center; color:#64748b">No image</div>`}
+        </div>
+        <div>
+          <label>คำบรรยายภาพ #${idx+1}</label>
+          <input data-idx="${idx}" class="cap" type="text" value="${(item.caption || "").replace(/"/g,'&quot;')}" placeholder="ข้อความใต้ภาพ">
+          <div class="row" style="margin-top:8px">
+            <button class="btn" data-idx="${idx}" data-act="replace">เปลี่ยนรูป</button>
+            <button class="btn" data-idx="${idx}" data-act="up">↑</button>
+            <button class="btn" data-idx="${idx}" data-act="down">↓</button>
+            <button class="btn" data-idx="${idx}" data-act="del">ลบ</button>
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(el);
+  });
+
+  // bind caption edits
+  grid.querySelectorAll(".cap").forEach(inp=>{
+    inp.addEventListener("input", (e)=>{
+      const i = +e.target.dataset.idx;
+      CFG.gallery[i].caption = e.target.value;
+      persistAndBroadcast();
+    });
+  });
+
+  // bind buttons
+  grid.querySelectorAll("button").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      const idx = +e.target.dataset.idx;
+      const act = e.target.dataset.act;
+      if(act==="del"){
+        CFG.gallery.splice(idx,1);
+      }
+      if(act==="up" && idx>0){
+        [CFG.gallery[idx-1], CFG.gallery[idx]] = [CFG.gallery[idx], CFG.gallery[idx-1]];
+      }
+      if(act==="down" && idx<CFG.gallery.length-1){
+        [CFG.gallery[idx+1], CFG.gallery[idx]] = [CFG.gallery[idx], CFG.gallery[idx+1]];
+      }
+      if(act==="replace"){
+        const f = await pickImage();
+        if(f){ CFG.gallery[idx].src = await fileToDataURL(f); }
+      }
+      persistAndBroadcast();
+      renderGrid();
+    });
+  });
+}
+renderGrid();
+
+/* ---------- Add files ---------- */
+const fileInput = document.getElementById("fileInput");
+document.getElementById("addFiles").onclick = async ()=>{
+  const files = [...fileInput.files];
+  if(!files.length){ alert("ยังไม่ได้เลือกไฟล์"); return; }
+  for(const f of files){
+    const data = await fileToDataURL(f);
+    CFG.gallery.push({src:data, caption:""});
+  }
+  fileInput.value = "";
+  persistAndBroadcast();
+  renderGrid();
+};
+
+function pickImage(){
+  return new Promise(res=>{
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept="image/*";
+    inp.onchange = ()=> res(inp.files[0] || null);
+    inp.click();
+  });
+}
+function fileToDataURL(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+/* ---------- Import/Export/Reset ---------- */
+document.getElementById("exportBtn").onclick = ()=>{
+  const blob = new Blob([JSON.stringify(CFG,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "config-export.json";
+  a.click();
+};
+document.getElementById("importInput").addEventListener("change", async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const text = await f.text();
+  try{
+    const obj = JSON.parse(text);
+    if(!obj || typeof obj !== "object") throw new Error("Bad JSON");
+    CFG = obj;
+    localStorage.setItem(KEY, JSON.stringify(CFG));
+    channel.postMessage({type:'cfg:update', payload: CFG});
+    line1.value = CFG.heroLines?.[0] ?? "";
+    line2.value = CFG.heroLines?.[1] ?? "";
+    renderGrid();
+    alert("Import สำเร็จ");
+  }catch(err){
+    alert("Import ไม่สำเร็จ: " + err.message);
+  }
+});
+document.getElementById("resetBtn").onclick = ()=>{
+  if(confirm("ล้างข้อมูลและกลับค่าเริ่มต้น?")){
+    CFG = DEFAULTS;
+    persistAndBroadcast();
+    line1.value = DEFAULTS.heroLines[0];
+    line2.value = DEFAULTS.heroLines[1];
+    renderGrid();
+  }
+};
+</script>
+</body>
+</html>
